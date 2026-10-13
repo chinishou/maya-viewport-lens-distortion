@@ -1,0 +1,27 @@
+// SPDX-License-Identifier: LGPL-3.0-or-later
+#include "Common.ogsfh"  // defines VS_ScreenQuad, VSUV, pixelOut/colorOut, etc.
+uniform texture2D sceneTexture;
+uniform sampler2D sceneSampler = sampler_state { Texture = <sceneTexture>; };
+uniform texture2D mapTexture;
+uniform sampler2D mapSampler = sampler_state { Texture = <mapTexture>; };
+uniform vec4 outputTransform = {1.0, 1.0, 0.0, 0.0};
+uniform vec4 mapTransform = {1.0, 1.0, 0.0, 0.0};
+uniform vec4 sourceTransform = {1.0, 1.0, 0.0, 0.0};
+GLSLShader LensPixel
+{
+    // Distortion logic lives in its own .glsl file for easier testing.
+    #include "lens_distort.glsl"
+    void main()
+    {
+        colorOut = lensDistort(sceneSampler, mapSampler, VSUV,
+                            outputTransform, mapTransform, sourceTransform);
+    }
+}
+technique Main
+{
+    pass p0
+    {
+        VertexShader (in VS_INPUT_ScreenQuad, out VS_TO_PS_ScreenQuad) = VS_ScreenQuad;
+        PixelShader (in VS_TO_PS_ScreenQuad, out pixelOut) = LensPixel;
+    }
+}
