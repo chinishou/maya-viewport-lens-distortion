@@ -34,7 +34,7 @@ def show() -> None:
     name: str = "stmapLensWindow"
     if cmds.window(name, exists=True):
         cmds.deleteUI(name)
-    cmds.window(name, title="STMap Lens Distortion", widthHeight=(480, 150))
+    cmds.window(name, title="STMap Lens Distortion", widthHeight=(480, 180))
     cmds.columnLayout(adjustableColumn=True, rowSpacing=8)
     field: str = cmds.textFieldButtonGrp(label="STMap", buttonLabel="Browse",
                                          text=override.get_stmap_path())
@@ -70,4 +70,6 @@ def show() -> None:
     disable_button: str = cmds.button(label="Disable", command=disable_btn_clicked, enable=False)
     cmds.textFieldButtonGrp(field, edit=True, buttonCommand=browse, textChangedCommand=update_btns_states)
     update_btns_states()
+    cmds.textFieldGrp(label="Author", text="https://github.com/chinishou/maya-viewport-lens-distortion",
+                      editable=False)
     cmds.showWindow(name)
