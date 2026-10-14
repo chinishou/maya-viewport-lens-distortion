@@ -1,5 +1,7 @@
 # Maya Viewport 2.0 STMap Lens Distortion
 
+![Maya Viewport 2.0 lens distortion preview](screenshot.png)
+
 ## Tested environment
 **Windows 11**
 **Maya 2026 / OpenGL Core Profile**
