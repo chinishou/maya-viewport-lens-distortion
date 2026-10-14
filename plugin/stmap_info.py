@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Read only the small EXR header without 3rd-party libs."""
+"""Inspect an STMap EXR header and its data/display windows without 3rd-party libs."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def inspect_stmap(path: str | PathLike[str]) -> STMapInfo:
         raise ValueError("Not an OpenEXR file")
     version: int = struct.unpack_from("<I", header, 4)[0]
     if version & (0x800 | 0x1000):
-        raise ValueError("Deep/multipart EXR maps are not supported")
+        raise ValueError("Deep/multipart EXR STMaps are not supported")
 
     pos: int = 8
     attrs: dict[bytes, bytes] = {}

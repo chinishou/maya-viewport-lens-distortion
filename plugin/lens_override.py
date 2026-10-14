@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 from maya import cmds
 from maya.api import OpenMayaRender as R
-from stmap_io import STMapInfo, inspect_stmap
+from stmap_info import STMapInfo, inspect_stmap
 
 NAME: str = "stmapLensDistortion"
 _override: LensOverride | None = None
@@ -50,7 +50,7 @@ class LensOverride(R.MRenderOverride):
         self.targets: dict[Target, R.MRenderTarget] = {}
         self.target_size: tuple[int, int] | None = None
         self.shader_instance: R.MShaderInstance | None = None
-        self.texture: R.MTexture | None = None
+        self.stmap_texture: R.MTexture | None = None
         self.stmap_path: str = ""
         self.ops: list[R.MRenderOperation] = [Scene(self), Distort(self), Present(self)]
 
@@ -77,7 +77,7 @@ class LensOverride(R.MRenderOverride):
         Maya supplies the destination panel name. This override uses the current
         output dimensions rather than querying that panel's on-screen dimensions.
         """
-        if self.texture is None:
+        if self.stmap_texture is None:
             raise RuntimeError("Choose an STMap and enable it from the Lens Distortion UI first")
         manager: R.MRenderTargetManager = R.MRenderer.getRenderTargetManager()
         output_size: tuple[int, int] = R.MRenderer.outputTargetSize()
@@ -112,24 +112,28 @@ class LensOverride(R.MRenderOverride):
         shader: R.MShaderInstance = self.shader_instance
         shader.setParameter("sceneTexture", self.targets[Target.SCENE_COLOR])
         assignment: R.MTextureAssignment = R.MTextureAssignment()
-        assignment.texture = self.texture
-        shader.setParameter("mapTexture", assignment)
+        assignment.texture = self.stmap_texture
+        shader.setParameter("stmapTexture", assignment)
 
     def set_stmap(self, path: str) -> None:
-        """Validate and load an STMap texture, preserving the old map on failure.
+        """Validate and load an STMap texture, preserving the current STMap on failure.
 
         https://help.autodesk.com/cloudhelp/2026/ENU/MAYA-API-REF/py_ref/class_open_maya_render_1_1_m_texture_manager.html
         """
         path = str(Path(path).resolve()) if path.strip() else path
         validate_stmap(path)
         tex_manager: R.MTextureManager = R.MRenderer.getTextureManager()
-        new_texture: R.MTexture | None = tex_manager.acquireTexture(path, "", 1) # Mipmap level 1
-        if new_texture is None:
+        # In Maya's OpenGL Core path, the first (top) EXR row becomes texture
+        # V=0. The screen quad also supplies V=0 at its top, so the shader can
+        # read the matching STMap row without flipping its UV or the map's G.
+        # One mipmap level keeps this floating-point STMap at its source size.
+        new_stmap_texture: R.MTexture | None = tex_manager.acquireTexture(path, "", 1)
+        if new_stmap_texture is None:
             raise RuntimeError("Maya could not load STMap: " + path)
         
-        # Replace the current map only after the new texture loads successfully.
-        previous: R.MTexture | None = self.texture
-        self.texture = new_texture
+        # Replace the current STMap only after the new texture loads successfully.
+        previous: R.MTexture | None = self.stmap_texture
+        self.stmap_texture = new_stmap_texture
         self.stmap_path = path
         if previous is not None:
             tex_manager.releaseTexture(previous)
@@ -140,10 +144,10 @@ class LensOverride(R.MRenderOverride):
         if self.shader_instance is not None:
             shader_manager.releaseShader(self.shader_instance)
             self.shader_instance = None
-        if self.texture is not None:
+        if self.stmap_texture is not None:
             tex_manager: R.MTextureManager = R.MRenderer.getTextureManager()
-            tex_manager.releaseTexture(self.texture)
-            self.texture = None
+            tex_manager.releaseTexture(self.stmap_texture)
+            self.stmap_texture = None
         target_manager: R.MRenderTargetManager = R.MRenderer.getRenderTargetManager()
         for target in self.targets.values():
             target_manager.releaseRenderTarget(target)

@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from maya.api.OpenMaya import MObject
 
-core: ModuleType | None = None
+override_module: ModuleType | None = None
 
 
 def maya_useNewAPI() -> None:
@@ -19,12 +19,12 @@ def maya_useNewAPI() -> None:
 
 
 def initializePlugin(obj: MObject) -> None:
-    global core
-    import lens_core
+    global override_module
+    import lens_override
 
-    core = lens_core
-    core.initializePlugin(obj)
+    override_module = lens_override
+    override_module.initializePlugin(obj)
 
 
 def uninitializePlugin(obj: MObject) -> None:
-    core.uninitializePlugin(obj)
+    override_module.uninitializePlugin(obj)

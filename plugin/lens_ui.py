@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from maya import cmds
-import lens_core as core
-from stmap_io import STMapInfo, comparison_size
+import lens_override as override
+from stmap_info import STMapInfo, comparison_size
 
 
 def confirm_resolution(path: str) -> bool:
-    info: STMapInfo = core.validate_stmap(path)
+    info: STMapInfo = override.validate_stmap(path)
     window_name, width, height = comparison_size(info)
     render_width: int = cmds.getAttr('defaultResolution.width')
     render_height: int = cmds.getAttr('defaultResolution.height')
@@ -28,20 +28,19 @@ def confirm_resolution(path: str) -> bool:
 
 def show() -> None:
     """UI entry point."""
-    core.plugin_load_check()
+    override.plugin_load_check()
     # Capture the model panel before the UI takes focus.
-    panel: str = core.active_panel()
+    panel: str = override.active_panel()
     name: str = "stmapLensWindow"
     if cmds.window(name, exists=True):
         cmds.deleteUI(name)
     cmds.window(name, title="STMap Lens Distortion", widthHeight=(480, 150))
     cmds.columnLayout(adjustableColumn=True, rowSpacing=8)
-    cmds.text(label="Raw float EXR / R=U, G=V / full viewport map domain")
     field: str = cmds.textFieldButtonGrp(label="STMap", buttonLabel="Browse",
-                                         text=core.get_stmap_path())
+                                         text=override.get_stmap_path())
 
     def update_btns_states(*_: object) -> None:
-        active: bool = core.is_enabled(panel)
+        active: bool = override.is_enabled(panel)
         has_path: bool = bool(cmds.textFieldButtonGrp(field, query=True, text=True).strip())
         cmds.button(enable_button, edit=True, enable=has_path and not active)
         cmds.button(disable_button, edit=True, enable=active)
@@ -57,13 +56,13 @@ def show() -> None:
         try:
             path: str = cmds.textFieldButtonGrp(field, query=True, text=True)
             if confirm_resolution(path):
-                core.enable(path, panel)
+                override.enable(path, panel)
         finally:
             update_btns_states()
 
     def disable_btn_clicked(*_: object) -> None:
         try:
-            core.disable(panel)
+            override.disable(panel)
         finally:
             update_btns_states()
 
